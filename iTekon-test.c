@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <signal.h>
 
-#include "lib/iTekon_usb.h"
+#include "lib/iTekon-usb.h"
 
 int breakflag = 0;
 void *handle_send(void *arg)

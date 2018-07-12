@@ -12,7 +12,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include "libusb.h"
-#include "iTekon_usb.h"
+#include "iTekon-usb.h"
 #include "rbuf.h"
 
 #define HTONL(v) ( ((v) << 24) | (((v) >> 24) & 255) | (((v) << 8) & 0xff0000) | (((v) >> 8) & 0xff00) )
