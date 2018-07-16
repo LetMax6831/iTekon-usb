@@ -1,4 +1,4 @@
-SET (LIBITEKONUSB_SRC iTekon-usb.c rbuf.c)
+SET (LIBITEKONUSB_SRC iTekon-usb.c rbuf.c sm4.c)
 
 ADD_LIBRARY (iTekon_usb_static STATIC ${LIBITEKONUSB_SRC})
 
