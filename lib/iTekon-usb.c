@@ -101,14 +101,17 @@ void * handle_recv(void *arg)
     int count = 0;
     int real_write = 0;
     while (1) {
+//        printf ("enter\n");
         usleep(1000);
-//        if (exit_flag == 1) {
+        if (exit_flag == 1) {
 //            printf ("exit\n");
-//            exit_flag = 2;
-//            break;
-//        }
+            exit_flag = 2;
+            break;
+        }
+//        printf ("%s---%d\n", __func__, __LINE__);
         memset(recv_data, 0, sizeof(recv_data));
         recv_len = self_usb_recvmsg_ed2 (usbinfo_handle[DevIndex].usb_p, recv_data, sizeof(recv_data));
+//        printf ("%s---%d\n", __func__, __LINE__);
         count = recv_len/19;
         for (i=0; i<recv_len/19; i++) {
             if (((recv_data+(i*19))[6]&0x10) == 0x10) {
@@ -123,6 +126,7 @@ void * handle_recv(void *arg)
                 printf("LINE:%d,\t 缓冲区已满\n", __LINE__);
             }
         }
+//        printf ("%s---%d---leave\n", __func__, __LINE__);
     }
     return NULL;
 }
@@ -140,10 +144,6 @@ DWORD __stdcall VCI_UsbInit ()
 
     memset (recvthread_handle, 0, sizeof(recvthread_handle));
 
-//    if (NULL != contex) {
-//        free (contex);
-//        contex = NULL;
-//    }
     libusb_init(&contex);
 //    libusb_set_debug(contex, 4);
     usbinit_flag = 1;
@@ -158,7 +158,8 @@ DWORD __stdcall VCI_UsbExit ()
     for (i=0; i<sizeof(usbinfo_handle)/sizeof(usbinfo_handle[0]); i++) {
         memset (&usbinfo_handle[i], 0, sizeof(USB_INFO_T));
     }
-//    libusb_exit(contex);
+
+    libusb_exit(contex);
     usbinit_flag = 0;
     error = 0;
     return 1;
@@ -291,17 +292,17 @@ DWORD __stdcall VCI_CloseDevice(DWORD DevType, DWORD DevIndex)
     int i = 0;
     int recv_len = 0;
 
-//    if (recvthread_handle[DevIndex] != 0) {
+    if (recvthread_handle[DevIndex] != 0) {
 //        printf ("2222222222\n");
-//        exit_flag = 1;
-//    }
-//    while (1) {
-//        sleep (1);
+        exit_flag = 1;
+    }
+    while (1) {
+        sleep (1);
 //        printf ("%d---\n", exit_flag);
 //        printf ("sssssssss\n");
-//        if (exit_flag != 1)
-//            break;
-//    }
+        if (exit_flag != 1)
+            break;
+    }
 
     recv_len = self_readusb_info_ed1 (usbinfo_handle[DevIndex].usb_p, CloseCan_data, sizeof(CloseCan_data), recvdata, sizeof(recvdata));
     CloseCan_data[4] = 0x10;
@@ -354,24 +355,24 @@ DWORD __stdcall VCI_InitCan(DWORD DevType, DWORD DevIndex, DWORD CANIndex, PVCI_
     for (i=4; i<20; i++) {
         authent[i] = rand()/256;
     }
-    for (i=0; i<20; i++) {
-        printf ("%02x ", authent[i]);
-    }
-    printf ("\n");
+//    for (i=0; i<20; i++) {
+//        printf ("%02x ", authent[i]);
+//    }
+//    printf ("\n");
 
     sm4_context ctx;
     sm4_setkey_enc (&ctx, key);
     sm4_crypt_ecb (&ctx, 1, 16, authent+4, output);
-    for (i=0; i<16; i++) {
-        printf ("%02x ", output[i]);
-    }
-    printf ("\n");
+//    for (i=0; i<16; i++) {
+//        printf ("%02x ", output[i]);
+//    }
+//    printf ("\n");
 #endif
     recv_len = self_readusb_info_ed1(usbinfo_handle[DevIndex].usb_p, authent, sizeof(authent), recvdata, sizeof(recvdata));
-    for (i=0; i< recv_len; i++) {
-        printf ("%02x ", recvdata[i]);
-    }
-    printf ("\n");
+//    for (i=0; i< recv_len; i++) {
+//        printf ("%02x ", recvdata[i]);
+//    }
+//    printf ("\n");
 
     for (i=0; i<sizeof(output); i++) {
         if ( recvdata[4+i] != output[i] ) {
@@ -626,7 +627,7 @@ ULONG __stdcall VCI_Transmit(DWORD DevType, DWORD DevIndex, DWORD CANIndex, PVCI
     unsigned char Transmit_templet[19] = {0x01, 0x02, 0x03, 0x04, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     unsigned char Transmit_data[19] = {0};
     int i = 0;
-//    unsigned char Transmit_data[19] = {0x01, 0x02, 0x03, 0x04, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
     if ((usbinfo_handle[DevIndex].use_flag != 1) || (usbinfo_handle[DevIndex].usb_p == NULL)) {
         printf("设备未启用\n");
         usbinfo_handle[DevIndex].error = 0x0400;
@@ -691,49 +692,6 @@ ULONG __stdcall VCI_Transmit(DWORD DevType, DWORD DevIndex, DWORD CANIndex, PVCI
 
         memcpy(sendall + i * sizeof(Transmit_templet), Transmit_data, sizeof(Transmit_templet));
     }
-
-//    UINT *tmp = (UINT *)&Transmit_data[0];
-//    *tmp = HTONL(pSend->TimeStamp);
-//    Transmit_data[4] = pSend->TimeFlag;
-//    Transmit_data[5] = pSend->SendType;
-//    if (CANIndex <= 1)
-//        Transmit_data[6] = Transmit_data[6] | CANIndex<<4;
-//    else {
-//        printf ("CAN索引错误 %lu\n", CANIndex);
-//        return 0;
-//    }
-
-//    if (pSend->RemoteFlag <= 1)
-//        Transmit_data[6] = Transmit_data[6] | pSend->RemoteFlag<<6;
-//    else {
-//        printf ("帧类型错误 %d\n", pSend->RemoteFlag);
-//        return 0;
-//    }
-
-//    if (pSend->ExternFlag <= 1)
-//        Transmit_data[6] = Transmit_data[6] | pSend->ExternFlag<<7;
-//    else {
-//        printf ("帧格式错误 %d\n", pSend->ExternFlag);
-//        return 0;
-//    }
-
-//    if (pSend->DataLen > 8) {
-//        printf("数据长度过长 %d\n", pSend->DataLen);
-//        return 0;
-//    }
-//    memcpy(Transmit_data+11, pSend->Data, pSend->DataLen);
-//    Transmit_data[6] = Transmit_data[6] | (pSend->DataLen&0x0f);
-
-//    UINT *tmp_id = NULL;
-//    tmp_id = (UINT *) &Transmit_data[7];
-//    *tmp_id = (pSend->ID);
-//    printf ("------%d\n", sizeof(Transmit_templet)*Len);
-//    for (i=0; i<sizeof(Transmit_templet)*Len; i++) {
-//        printf ( "%02x ", sendall[i]);
-//        if (i%19 == 0)
-//            printf ("\n");
-//    }
-//    printf ("\n");
 
     self_usb_sendmsg_ed2 (usbinfo_handle[DevIndex].usb_p, sendall, sizeof(Transmit_templet)*Len);
 
