@@ -66,7 +66,6 @@ void exit_can()
         break;
     }
     breakflag = 0;
-//    sleep(1);
     VCI_ResetCAN(254, 0, 0);
     VCI_ResetCAN(254, 0, 1);
     VCI_CloseDevice (254, 0);
@@ -109,40 +108,40 @@ int main(void)
 	init_config.Filter = 0;
 	init_config.Mode = MODE_NORMAL;
 	init_config.BotRate =BOT_1000K;
-    printf ("%d\n", __LINE__);
+
     ret = VCI_InitCan(254, 0, 0, &init_config);
     if (ret == 0) {
         exit_can();
         return 0;
     }
-    printf ("%d\n", __LINE__);
+
     ret = VCI_InitCan(254, 0, 1, &init_config);
     if (ret == 0) {
         exit_can();
         return 0;
     }
-    printf ("---%d---\n", __LINE__);
+
 	bzero(&board_info, sizeof(board_info));
     ret = VCI_ReadBoardInfo(254, 0, &board_info);
     if (ret == 0) {
         exit_can();
         return 0;
     }
-    printf ("---%d---\n", __LINE__);
+
     ret = VCI_StartCAN (254, 0, 0);
     if (ret == 0) {
         exit_can();
         return 0;
     }
-    printf ("---%d---\n", __LINE__);
+
     ret = VCI_StartCAN (254, 0, 1);
     if (ret == 0) {
         exit_can();
         return 0;
     }
-    printf ("---%d---\n", __LINE__);
+
     ret = pthread_create(&send_handle, NULL, handle_send, NULL);
-    printf ("---%d---\n", __LINE__);
+
 	VCI_CAN_OBJ recv_msg[1];
 	memset(recv_msg, 0, sizeof(VCI_CAN_OBJ)*1);
 	while (1) {
@@ -179,11 +178,13 @@ int main1(void)
     VCI_INIT_CONFIG init_config;
     int ret = 0;
     signal_handle ();
+
     ret = VCI_UsbInit ();
     if (ret == 0) {
         exit_can();
         return 0;
     }
+
     ret = VCI_OpenDevice(254, 0, 0);
     if (ret == 0) {
         exit_can();
@@ -196,13 +197,13 @@ int main1(void)
     init_config.Filter = 0;
     init_config.Mode = MODE_NORMAL;
     init_config.BotRate =BOT_1000K;
-
+//printf ("____%d_____\n", __LINE__);
     ret = VCI_InitCan(254, 0, 0, &init_config);
     if (ret == 0) {
         exit_can();
         return 0;
     }
-
+//printf ("____%d_____\n", __LINE__);
     ret = VCI_InitCan(254, 0, 1, &init_config);
     if (ret == 0) {
         exit_can();
@@ -214,6 +215,7 @@ int main1(void)
         exit_can();
         return 0;
     }
+
     ret = VCI_StartCAN (254, 0, 0);
     if (ret == 0) {
         exit_can();
@@ -229,26 +231,8 @@ int main1(void)
     ret = pthread_create(&send_handle, NULL, handle_send, NULL);
     sleep (10);
     int num = VCI_GetReceiveNum(254, 0, 0);
-            printf("----%d-- 存储空间中有 %d条数据\n", __LINE__, num);
+    printf("----%d-- 存储空间中有 %d条数据\n", __LINE__, num);
 
-//    VCI_CAN_OBJ recv_msg[1];
-//    memset(recv_msg, 0, sizeof(VCI_CAN_OBJ)*1);
-//	while (1) {
-//        int num = VCI_GetReceiveNum(254, 0, 0);
-//        printf("----%d-- 存储空间中有 %d条数据\n", __LINE__, num);
-//        VCI_Receive(254, 0, 0, recv_msg, 1, 0);
-//        int i,j;
-//	for (i=0; i<1; i++) {
-//		printf("ID: %08x DataLen:%02x ExternFlag:%02x RemoteFlag: %02x data:", recv_msg[i].ID, recv_msg[i].DataLen, recv_msg[i].ExternFlag, recv_msg[i].RemoteFlag);
-//		for (j=0; j< recv_msg[i].DataLen; j++) {
-//			printf("%02x ", recv_msg[i].Data[j]);
-//		}
-//		printf("\n");
-
-//	}
-
-//    sleep(1);
-//    }
     goto selfstop;
 
     VCI_ResetCAN (254, 0, 0);
@@ -263,6 +247,7 @@ int main()
 {
     main1();
     sleep (5);
+    printf ("sssssssss  %d\n", __LINE__);
     main1();
 }
 #endif

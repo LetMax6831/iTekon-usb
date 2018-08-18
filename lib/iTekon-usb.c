@@ -94,24 +94,27 @@ end:
 
 void * handle_recv(void *arg)
 {
-    int DevIndex = *(int *)arg;
+    int DevIndex = *((int *)arg);
+    *(int *)arg = 100;
     unsigned char recv_data[19*3] = {0};
     int recv_len = 0;
     int i;
     int count = 0;
     int real_write = 0;
     while (1) {
-//        printf ("enter\n");
         usleep(1000);
         if (exit_flag == 1) {
-//            printf ("exit\n");
             exit_flag = 2;
             break;
         }
-//        printf ("%s---%d\n", __func__, __LINE__);
+
+        if (DevIndex >=2)
+        {
+            printf ("内置接收程序启动失败\n");
+            return NULL;
+        }
         memset(recv_data, 0, sizeof(recv_data));
         recv_len = self_usb_recvmsg_ed2 (usbinfo_handle[DevIndex].usb_p, recv_data, sizeof(recv_data));
-//        printf ("%s---%d\n", __func__, __LINE__);
         count = recv_len/19;
         for (i=0; i<recv_len/19; i++) {
             if (((recv_data+(i*19))[6]&0x10) == 0x10) {
@@ -126,7 +129,6 @@ void * handle_recv(void *arg)
                 printf("LINE:%d,\t 缓冲区已满\n", __LINE__);
             }
         }
-//        printf ("%s---%d---leave\n", __func__, __LINE__);
     }
     return NULL;
 }
@@ -140,6 +142,7 @@ DWORD __stdcall VCI_UsbInit ()
     int i;
     for (i=0; i<sizeof(usbinfo_handle)/sizeof(usbinfo_handle[0]); i++) {
         memset (&usbinfo_handle[i], 0, sizeof(USB_INFO_T));
+        usbinfo_handle[i].usb_p = NULL;
     }
 
     memset (recvthread_handle, 0, sizeof(recvthread_handle));
@@ -276,7 +279,11 @@ DWORD __stdcall VCI_OpenDevice(DWORD DevType, DWORD DevIndex, DWORD Reserved)
     //创建数据接收线程，准备接收数据。
     ret = pthread_create(&(recvthread_handle[DevIndex]), NULL, handle_recv, (void *)&DevIndex);
     usbinfo_handle[DevIndex].error = 0;
-
+    while (1) {
+        if (DevIndex == 100)
+            break;
+        usleep (2);
+    }
 
     return 1;
 }
@@ -293,13 +300,10 @@ DWORD __stdcall VCI_CloseDevice(DWORD DevType, DWORD DevIndex)
     int recv_len = 0;
 
     if (recvthread_handle[DevIndex] != 0) {
-//        printf ("2222222222\n");
         exit_flag = 1;
     }
     while (1) {
         sleep (1);
-//        printf ("%d---\n", exit_flag);
-//        printf ("sssssssss\n");
         if (exit_flag != 1)
             break;
     }
@@ -355,24 +359,12 @@ DWORD __stdcall VCI_InitCan(DWORD DevType, DWORD DevIndex, DWORD CANIndex, PVCI_
     for (i=4; i<20; i++) {
         authent[i] = rand()/256;
     }
-//    for (i=0; i<20; i++) {
-//        printf ("%02x ", authent[i]);
-//    }
-//    printf ("\n");
 
     sm4_context ctx;
     sm4_setkey_enc (&ctx, key);
     sm4_crypt_ecb (&ctx, 1, 16, authent+4, output);
-//    for (i=0; i<16; i++) {
-//        printf ("%02x ", output[i]);
-//    }
-//    printf ("\n");
 #endif
     recv_len = self_readusb_info_ed1(usbinfo_handle[DevIndex].usb_p, authent, sizeof(authent), recvdata, sizeof(recvdata));
-//    for (i=0; i< recv_len; i++) {
-//        printf ("%02x ", recvdata[i]);
-//    }
-//    printf ("\n");
 
     for (i=0; i<sizeof(output); i++) {
         if ( recvdata[4+i] != output[i] ) {
