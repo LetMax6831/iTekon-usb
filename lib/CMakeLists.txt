@@ -9,10 +9,10 @@ SET_TARGET_PROPERTIES (iTekon_usb_static PROPERTIES CLEAN_DIRECT_OUTPUT 1)
 INSTALL (TARGETS iTekon_usb_static LIBRARY DESTINATION lib/iTekon-usb ARCHIVE DESTINATION lib/iTekon-usb)
 INSTALL (FILES iTekon-usb.h DESTINATION include/iTekon-usb)
 
+#link_libraries("/root/iTekon-usb-master/lib/libusb-1.0.a")
 target_link_libraries(iTekon_usb_static 
- "-Wl,--whole-archive"
-	libusb-1.0.a
-	pthread 
-	udev
-"-Wl,--no-whole-archive")
+# "-Wl,--whole-archive"
+	"/root/iTekon-usb-master/lib/libusb-1.0.a"
+	pthread )
+#"-Wl,--no-whole-archive")
 

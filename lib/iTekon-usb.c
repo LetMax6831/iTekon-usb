@@ -82,7 +82,7 @@ int self_usb_recvmsg_ed2 (struct libusb_device_handle * usb_p, unsigned char *re
         return -1;
     }
     int recv_len = 0;
-    int ret = libusb_bulk_transfer(usb_p, 0x82, recv_msg, recv_max, &recv_len, 1000);
+    int ret = libusb_bulk_transfer(usb_p, 0x82, recv_msg, recv_max, &recv_len, 10);
     if (ret < 0 && ret != LIBUSB_ERROR_OVERFLOW && ret != LIBUSB_ERROR_TIMEOUT) {
 //        printf("LINE:%d\t recvmsg_ed2 faild %s recv %d\n", __LINE__, libusb_strerror(ret), recv_len);
         goto end;
@@ -102,7 +102,7 @@ void * handle_recv(void *arg)
     int count = 0;
     int real_write = 0;
     while (1) {
-        usleep(1000);
+//        usleep(1000);
         if (exit_flag == 1) {
             exit_flag = 2;
             break;
