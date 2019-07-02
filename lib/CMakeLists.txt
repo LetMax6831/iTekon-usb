@@ -10,9 +10,7 @@ INSTALL (TARGETS iTekon_usb_static LIBRARY DESTINATION lib/iTekon-usb ARCHIVE DE
 INSTALL (FILES iTekon-usb.h DESTINATION include/iTekon-usb)
 
 #link_libraries("/root/iTekon-usb-master/lib/libusb-1.0.a")
-target_link_libraries(iTekon_usb_static 
+target_link_libraries(iTekon_usb_static ${CMAKE_CURRENT_SOURCE_DIR}/libusb-1.0.a pthread )
 # "-Wl,--whole-archive"
-	"/root/iTekon-usb-master/lib/libusb-1.0.a"
-	pthread )
 #"-Wl,--no-whole-archive")
 

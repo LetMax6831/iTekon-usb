@@ -168,36 +168,6 @@ DWORD __stdcall VCI_UsbExit ()
     return 1;
 }
 
-//const char *__stdcall VCI_ErrorStr () {
-//    switch (error) {
-//    case 0:
-//        return "成功";
-//    case 2:
-//        return "USB未初始化";
-//    case 3:
-//        return "不支持此类型设备";
-//    case 4:
-//        return "";
-//    case 5:
-//        return "超出可用设备";
-//    case 6:
-//        return "CAN索引参数异常";
-//    case 7:
-//        return "模式未知";
-//    case 8:
-//        return "波特率设置失败";
-//    case 0x0100:
-//        return "此设备已打开";
-//    case 0x0200:
-//        return "打开设备错误";
-//    case 0x1000:
-//        return "此设备不存在";
-//    case 0x0400:
-//        return "设备没有打开";
-//    default:
-//        break;
-//    }
-//}
 
 DWORD __stdcall VCI_OpenDevice(DWORD DevType, DWORD DevIndex, DWORD Reserved)
 {
@@ -264,7 +234,6 @@ DWORD __stdcall VCI_OpenDevice(DWORD DevType, DWORD DevIndex, DWORD Reserved)
     int ret = libusb_open(dev, &usbinfo_handle[DevIndex].usb_p);
     if (ret < 0) {
         usbinfo_handle[DevIndex].error = 0x0200;
-//        printf ("打开USB设备失败. %s\n", libusb_strerror (ret));
         libusb_free_device_list(devs, 1);
         return 0;
     }
@@ -337,7 +306,6 @@ DWORD __stdcall VCI_InitCan(DWORD DevType, DWORD DevIndex, DWORD CANIndex, PVCI_
     unsigned char recvdata[100] = {0};
 
     if ((usbinfo_handle[DevIndex].use_flag != 1) || (usbinfo_handle[DevIndex].usb_p == NULL)) {
-//        printf("设备未启用\n");
         usbinfo_handle[DevIndex].error = 0x0400;
         return 0;
     }
@@ -417,7 +385,6 @@ DWORD __stdcall VCI_InitCan(DWORD DevType, DWORD DevIndex, DWORD CANIndex, PVCI_
         return 0;
     }
 
-//    int i;
     for (i=0; i<14; i++) {
         FilterAccMask_data[3] = (unsigned char )i;
 
@@ -694,11 +661,6 @@ ULONG __stdcall VCI_Transmit(DWORD DevType, DWORD DevIndex, DWORD CANIndex, PVCI
     if (ret < 0) {
         printf("LINE:%d\tret %s recv %d\n", __LINE__, libusb_strerror(ret), recv_len);
     }
-//    for (i=0; i<recv_len; i++) {
-//        printf ("%02x ", read_msg[i]);
-//    }
-
-//    printf ("\n");
 
     usbinfo_handle[DevIndex].error = 0;
 
@@ -728,22 +690,6 @@ ULONG __stdcall VCI_Receive(DWORD DevType, DWORD DevIndex, DWORD CANIndex, PVCI_
         pReceive[i].ID = *((UINT *)&(buf[7]));
         pReceive[i].DataLen = buf[6]&0x0f;
         memcpy(pReceive[i].Data, buf+11, 8);
-//        printf("TimeStamp:%x\n", pReceive->TimeStamp);
-//        printf("TimeFlag:%x\n", pReceive->TimeFlag);
-//        printf("SendType:%x\n", pReceive->SendType);
-//        printf("RemoteFlag:%x\n", pReceive->RemoteFlag);
-//        printf("ExternFlag:%x\n", pReceive->ExternFlag);
-//        printf("ID:%x\n", pReceive->ID);
-//        printf("Data: \t");
-//        for (j=0; j< pReceive->DataLen; j++) {
-//            printf("%02x ", pReceive->Data[j]);
-//        }
-//        printf("\n");
-
-//        for (j=0; j< 19; j++) {
-//            printf("%02x ", (buf[j]));
-//        }
-//        printf("\n");
     }
     usbinfo_handle[DevIndex].error = 0;
     return 1;
