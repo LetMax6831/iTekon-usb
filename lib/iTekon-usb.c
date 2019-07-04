@@ -84,7 +84,6 @@ int self_usb_recvmsg_ed2 (struct libusb_device_handle * usb_p, unsigned char *re
     int recv_len = 0;
     int ret = libusb_bulk_transfer(usb_p, 0x82, recv_msg, recv_max, &recv_len, 10);
     if (ret < 0 && ret != LIBUSB_ERROR_OVERFLOW && ret != LIBUSB_ERROR_TIMEOUT) {
-//        printf("LINE:%d\t recvmsg_ed2 faild %s recv %d\n", __LINE__, libusb_strerror(ret), recv_len);
         goto end;
     }
     ret = recv_len;
@@ -102,7 +101,6 @@ void * handle_recv(void *arg)
     int count = 0;
     int real_write = 0;
     while (1) {
-//        usleep(1000);
         if (exit_flag == 1) {
             exit_flag = 2;
             break;
@@ -125,7 +123,6 @@ void * handle_recv(void *arg)
             }
             if (real_write != 19) {
                 usbinfo_handle[DevIndex].error = 0x0800;
-//                error = 0x0800;
                 printf("LINE:%d,\t 缓冲区已满\n", __LINE__);
             }
         }
@@ -177,7 +174,7 @@ DWORD __stdcall VCI_OpenDevice(DWORD DevType, DWORD DevIndex, DWORD Reserved)
     }
     //遍历所有usb设备，先找到符合vid pid 和索引值的设备
     uint16_t vendor_id, product_id;
-    if (DevType == 254) {
+    if (DevType == 4) {
         vendor_id = 0x0471;
         product_id = 0x1200;
     }
@@ -501,6 +498,7 @@ ULONG __stdcall VCI_GetReceiveNum(DWORD DevType, DWORD DevIndex, DWORD CANIndex)
 
     if (CANIndex <= 1)
     {
+        printf("%d\n", rbuf_used(usbinfo_handle[DevIndex].rbuf_handle[CANIndex]));
         recvnum = rbuf_used(usbinfo_handle[DevIndex].rbuf_handle[CANIndex])/19;
     }
     else {
@@ -580,12 +578,14 @@ DWORD __stdcall VCI_ResetCAN(DWORD DevType, DWORD DevIndex, DWORD CANIndex)
     return 1;
 }
 
+
 ULONG __stdcall VCI_Transmit(DWORD DevType, DWORD DevIndex, DWORD CANIndex, PVCI_CAN_OBJ pSend, ULONG Len)
 {
-    unsigned char *sendall = NULL;
+    //设备最大读取性能为三帧数据，多出会出异常。所以sendall空间默认为3*19长度
+    unsigned char sendall[57] = {0};
     unsigned char Transmit_templet[19] = {0x01, 0x02, 0x03, 0x04, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    unsigned char Transmit_data[19] = {0};
-    int i = 0;
+    unsigned char Transmit_data[19] = {1};
+    int i = 0, j = 0;
 
     if ((usbinfo_handle[DevIndex].use_flag != 1) || (usbinfo_handle[DevIndex].usb_p == NULL)) {
         printf("设备未启用\n");
@@ -599,60 +599,111 @@ ULONG __stdcall VCI_Transmit(DWORD DevType, DWORD DevIndex, DWORD CANIndex, PVCI
         return 0;
     }
 
-    sendall = (unsigned char *)calloc (sizeof(Transmit_templet)*Len, sizeof(unsigned char));
-    if (NULL == sendall) {
-        usbinfo_handle[DevIndex].error = 0x0800;
-        return 0;
+    int send_num = 0;
+    int quotient = Len/3;
+    int remainder = Len%3;
+    for (j=0; j<quotient; j++)
+    {
+        memset(sendall, 0, sizeof(sendall));
+        for (i = 0; i < 3; i++) {
+            memset(Transmit_data, 0, sizeof(Transmit_data));
+            memcpy(Transmit_data, Transmit_templet, sizeof(Transmit_templet));
+
+            UINT *tmp = (UINT *)&Transmit_data[0];
+            *tmp = HTONL(pSend[send_num].TimeStamp);
+            Transmit_data[4] = pSend[send_num].TimeFlag;
+            Transmit_data[5] = pSend[send_num].SendType;
+
+            Transmit_data[6] = Transmit_data[6] | CANIndex<<4;
+
+            if (pSend[send_num].RemoteFlag <= 1)
+                Transmit_data[6] = Transmit_data[6] | pSend[send_num].RemoteFlag<<6;
+            else {
+                printf ("帧类型错误 %d\n", pSend[send_num].RemoteFlag);
+                usbinfo_handle[DevIndex].error = 1;
+                return 0;
+            }
+
+            if (pSend[send_num].ExternFlag <= 1)
+                Transmit_data[6] = Transmit_data[6] | pSend[send_num].ExternFlag<<7;
+            else {
+                printf ("帧格式错误 %d\n", pSend[send_num].ExternFlag);
+                usbinfo_handle[DevIndex].error = 1;
+                return 0;
+            }
+
+            if (pSend[send_num].DataLen > 8) {
+                printf("数据长度过长 %d\n", pSend[send_num].DataLen);
+                usbinfo_handle[DevIndex].error = 1;
+                return 0;
+            }
+            memcpy(Transmit_data+11, pSend[send_num].Data, pSend[send_num].DataLen);
+            Transmit_data[6] = Transmit_data[6] | (pSend[send_num].DataLen&0x0f);
+
+            UINT *tmp_id = NULL;
+            tmp_id = (UINT *) &Transmit_data[7];
+            *tmp_id = (pSend[send_num].ID);
+            send_num++;
+
+            memcpy(sendall + i * sizeof(Transmit_templet), Transmit_data, sizeof(Transmit_templet));
+        }
+
+        self_usb_sendmsg_ed2 (usbinfo_handle[DevIndex].usb_p, sendall, sizeof(Transmit_templet)*3);
+
+        unsigned char read_msg[10] = {0};
+        int recv_len = 0;
+        int ret = 0;
+        ret = libusb_interrupt_transfer (usbinfo_handle[DevIndex].usb_p, 0x81, read_msg, 10, &recv_len, 1000);
+        if (ret < 0) {
+            printf("LINE:%d\tret %s recv %d\n", __LINE__, libusb_strerror(ret), recv_len);
+        }
     }
-    for (i = 0; i < Len; i++) {
+
+    memset(sendall, 0, sizeof(sendall));
+    for (i = 0; i < remainder; i++) {
         memset(Transmit_data, 0, sizeof(Transmit_data));
         memcpy(Transmit_data, Transmit_templet, sizeof(Transmit_templet));
 
         UINT *tmp = (UINT *)&Transmit_data[0];
-        *tmp = HTONL(pSend->TimeStamp);
-        Transmit_data[4] = pSend[i].TimeFlag;
-        Transmit_data[5] = pSend[i].SendType;
+        *tmp = HTONL(pSend[send_num].TimeStamp);
+        Transmit_data[4] = pSend[send_num].TimeFlag;
+        Transmit_data[5] = pSend[send_num].SendType;
 
         Transmit_data[6] = Transmit_data[6] | CANIndex<<4;
 
-        if (pSend[i].RemoteFlag <= 1)
-            Transmit_data[6] = Transmit_data[6] | pSend[i].RemoteFlag<<6;
+        if (pSend[send_num].RemoteFlag <= 1)
+            Transmit_data[6] = Transmit_data[6] | pSend[send_num].RemoteFlag<<6;
         else {
-            printf ("帧类型错误 %d\n", pSend[i].RemoteFlag);
-            free (sendall);
-            sendall = NULL;
+            printf ("帧类型错误 %d\n", pSend[send_num].RemoteFlag);
             usbinfo_handle[DevIndex].error = 1;
             return 0;
         }
 
-        if (pSend[i].ExternFlag <= 1)
-            Transmit_data[6] = Transmit_data[6] | pSend[i].ExternFlag<<7;
+        if (pSend[send_num].ExternFlag <= 1)
+            Transmit_data[6] = Transmit_data[6] | pSend[send_num].ExternFlag<<7;
         else {
-            printf ("帧格式错误 %d\n", pSend[i].ExternFlag);
-            free (sendall);
-            sendall = NULL;
+            printf ("帧格式错误 %d\n", pSend[send_num].ExternFlag);
             usbinfo_handle[DevIndex].error = 1;
             return 0;
         }
 
-        if (pSend[i].DataLen > 8) {
-            printf("数据长度过长 %d\n", pSend[i].DataLen);
+        if (pSend[send_num].DataLen > 8) {
+            printf("数据长度过长 %d\n", pSend[send_num].DataLen);
             usbinfo_handle[DevIndex].error = 1;
-            free (sendall);
-            sendall = NULL;
             return 0;
         }
-        memcpy(Transmit_data+11, pSend[i].Data, pSend[i].DataLen);
-        Transmit_data[6] = Transmit_data[6] | (pSend[i].DataLen&0x0f);
+        memcpy(Transmit_data+11, pSend[send_num].Data, pSend[send_num].DataLen);
+        Transmit_data[6] = Transmit_data[6] | (pSend[send_num].DataLen&0x0f);
 
         UINT *tmp_id = NULL;
         tmp_id = (UINT *) &Transmit_data[7];
-        *tmp_id = (pSend[i].ID);
+        *tmp_id = (pSend[send_num].ID);
+        send_num++;
 
         memcpy(sendall + i * sizeof(Transmit_templet), Transmit_data, sizeof(Transmit_templet));
     }
 
-    self_usb_sendmsg_ed2 (usbinfo_handle[DevIndex].usb_p, sendall, sizeof(Transmit_templet)*Len);
+    self_usb_sendmsg_ed2 (usbinfo_handle[DevIndex].usb_p, sendall, sizeof(Transmit_templet)*remainder);
 
     unsigned char read_msg[10] = {0};
     int recv_len = 0;
@@ -662,10 +713,8 @@ ULONG __stdcall VCI_Transmit(DWORD DevType, DWORD DevIndex, DWORD CANIndex, PVCI
         printf("LINE:%d\tret %s recv %d\n", __LINE__, libusb_strerror(ret), recv_len);
     }
 
-    usbinfo_handle[DevIndex].error = 0;
 
-    free (sendall);
-    sendall = NULL;
+    usbinfo_handle[DevIndex].error = 0;
 
     return 1;
 }
