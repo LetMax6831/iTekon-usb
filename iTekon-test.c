@@ -123,14 +123,20 @@ void *handle_send(void *arg)
     return NULL;
 }
 
-void exit_can()
+void exit_can(int flag)
 {
-    //关闭发送线程。
-    breakflag = 1;
-    while ((breakflag == 2) || (breakflag == 0)) {
-        break;
+    if (1 != flag)
+    {
+        //关闭发送线程。
+        breakflag = 1;
+        while(1)
+        {
+            if((breakflag == 2) || (breakflag == 0)) {
+                break;
+            }
+        }
+        breakflag = 0;
     }
-    breakflag = 0;
     VCI_ResetCAN(254, 0, 0);
     VCI_ResetCAN(254, 0, 1);
     VCI_CloseDevice (254, 0);
@@ -158,12 +164,12 @@ int main(void)
     signal_handle ();
     ret = VCI_UsbInit ();
     if (ret == 0) {
-        exit_can();
+        exit_can(1);
         return 0;
     }
-    ret = VCI_OpenDevice(254, 0, 0);
+    ret = VCI_OpenDevice(4, 0, 0);
     if (ret == 0) {
-        exit_can();
+        exit_can(1);
         return 0;
     }
 
@@ -176,32 +182,32 @@ int main(void)
 
     ret = VCI_InitCan(254, 0, 0, &init_config);
     if (ret == 0) {
-        exit_can();
+        exit_can(1);
         return 0;
     }
 
     ret = VCI_InitCan(254, 0, 1, &init_config);
     if (ret == 0) {
-        exit_can();
+        exit_can(1);
         return 0;
     }
 
 	bzero(&board_info, sizeof(board_info));
     ret = VCI_ReadBoardInfo(254, 0, &board_info);
     if (ret == 0) {
-        exit_can();
+        exit_can(1);
         return 0;
     }
 
     ret = VCI_StartCAN (254, 0, 0);
     if (ret == 0) {
-        exit_can();
+        exit_can(1);
         return 0;
     }
 
     ret = VCI_StartCAN (254, 0, 1);
     if (ret == 0) {
-        exit_can();
+        exit_can(1);
         return 0;
     }
 
@@ -243,86 +249,4 @@ selfstop:
 	return 0;
 }
 
-#endif
-
-#if 0
-int main1(void)
-{
-    pthread_t recv_handle, send_handle;
-    VCI_BOARD_INFO board_info;
-    VCI_INIT_CONFIG init_config;
-    int ret = 0;
-    signal_handle ();
-
-    ret = VCI_UsbInit ();
-    if (ret == 0) {
-        exit_can();
-        return 0;
-    }
-
-    ret = VCI_OpenDevice(254, 0, 0);
-    if (ret == 0) {
-        exit_can();
-        return 0;
-    }
-
-    bzero(&init_config, sizeof(VCI_INIT_CONFIG));
-    init_config.AccCode = 0;
-    init_config.AccMask = 0;
-    init_config.Filter = 0;
-    init_config.Mode = MODE_NORMAL;
-    init_config.BotRate =BOT_1000K;
-//printf ("____%d_____\n", __LINE__);
-    ret = VCI_InitCan(254, 0, 0, &init_config);
-    if (ret == 0) {
-        exit_can();
-        return 0;
-    }
-//printf ("____%d_____\n", __LINE__);
-    ret = VCI_InitCan(254, 0, 1, &init_config);
-    if (ret == 0) {
-        exit_can();
-        return 0;
-    }
-    bzero(&board_info, sizeof(board_info));
-    ret = VCI_ReadBoardInfo(254, 0, &board_info);
-    if (ret == 0) {
-        exit_can();
-        return 0;
-    }
-
-    ret = VCI_StartCAN (254, 0, 0);
-    if (ret == 0) {
-        exit_can();
-        return 0;
-    }
-
-    ret = VCI_StartCAN (254, 0, 1);
-    if (ret == 0) {
-        exit_can();
-        return 0;
-    }
-
-    ret = pthread_create(&send_handle, NULL, handle_send, NULL);
-    sleep (10);
-    int num = VCI_GetReceiveNum(254, 0, 0);
-    printf("----%d-- 存储空间中有 %d条数据\n", __LINE__, num);
-
-    goto selfstop;
-
-    VCI_ResetCAN (254, 0, 0);
-selfstop:
-    VCI_CloseDevice (254, 0);
-    VCI_UsbExit();
-    return 0;
-}
-
-
-int main()
-{
-    main1();
-    sleep (5);
-    printf ("sssssssss  %d\n", __LINE__);
-    main1();
-}
 #endif

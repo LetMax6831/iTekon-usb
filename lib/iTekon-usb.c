@@ -278,7 +278,6 @@ DWORD __stdcall VCI_CloseDevice(DWORD DevType, DWORD DevIndex)
     CloseCan_data[4] = 0x10;
     recv_len = self_readusb_info_ed1 (usbinfo_handle[DevIndex].usb_p, CloseCan_data, sizeof(CloseCan_data), recvdata, sizeof(recvdata));
 
-
     libusb_close(usbinfo_handle[DevIndex].usb_p);
     usbinfo_handle[DevIndex].usb_p = NULL;
     usbinfo_handle[DevIndex].use_flag = 0;
@@ -568,9 +567,9 @@ DWORD __stdcall VCI_ResetCAN(DWORD DevType, DWORD DevIndex, DWORD CANIndex)
     recv_len = self_readusb_info_ed1 (usbinfo_handle[DevIndex].usb_p, ResetCan_data, sizeof(ResetCan_data), recvdata, sizeof(recvdata));
     if (0x81 == recvdata[2]) {
         rbuf_clear(usbinfo_handle[DevIndex].rbuf_handle[CANIndex]);
-//        printf ("关闭CAN%d成功\n", CANIndex);
+        printf ("%d-关闭CAN%d成功\n", __LINE__, CANIndex);
     }else {
-        printf ("关闭CAN%lu失败\n", CANIndex);
+        printf ("%d-关闭CAN%lu失败\n", __LINE__, CANIndex);
         usbinfo_handle[DevIndex].error = 1;
         return 0;
     }
