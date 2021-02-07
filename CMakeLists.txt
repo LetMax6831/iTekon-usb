@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 2.6)
-#111111111111111111111111
+
 project (iTekon)
 
 add_executable(iTekon-test iTekon-test.c)
